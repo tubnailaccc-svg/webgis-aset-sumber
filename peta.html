@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WebGIS Peta Aset Tanah | Kecamatan Sumber, Cirebon</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #1a2e28; }
+        
+        .leaflet-control-attribution { display: none !important; }
+        
+        .navbar {
+            background: #0a3d34;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-icon { font-size: 1.8rem; color: #ffd966; }
+        .logo h1 { font-size: 1.2rem; font-weight: 700; color: white; }
+        .logo p { font-size: 0.65rem; color: #b8dfd4; }
+        .nav-menu { display: flex; gap: 1rem; align-items: center; }
+        .nav-menu a { color: white; text-decoration: none; font-weight: 500; font-size: 0.9rem; padding: 0.4rem 1rem; border-radius: 40px; transition: 0.2s; }
+        .nav-menu a:hover { background: rgba(255,255,255,0.1); }
+        .btn-home { background: #ffd966; color: #0a3d34 !important; font-weight: 700 !important; }
+        
+        .map-container { height: calc(100vh - 70px); width: 100%; position: relative; }
+        #map { height: 100%; width: 100%; }
+        
+        .dashboard-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        .dashboard-toggle-btn {
+            background: #0a3d34;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dashboard-toggle-btn:hover { background: #1e6b5e; }
+        .dashboard-panel {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 12px;
+            width: 240px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            margin-top: 10px;
+            max-height: 70vh;
+            overflow-y: auto;
+            font-size: 0.7rem;
+        }
+        .dashboard-panel.hidden { display: none; }
+        .dashboard-panel h4 { color: #0a3d34; margin-bottom: 10px; font-size: 0.85rem; border-bottom: 2px solid #ffd966; padding-bottom: 5px; }
+        .stat-card { background: #f0f7f4; border-radius: 12px; padding: 8px; margin-bottom: 10px; text-align: center; }
+        .stat-number { font-size: 1.6rem; font-weight: 800; color: #0a3d34; }
+        .stat-label { font-size: 0.6rem; color: #5a7a72; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-group label { font-size: 0.65rem; font-weight: 600; color: #0a3d34; display: block; margin-bottom: 4px; }
+        .filter-group input, .filter-group select { width: 100%; padding: 6px 10px; border-radius: 20px; border: 1px solid #ddd; font-size: 0.7rem; background: white; }
+        .btn-filter { background: #0a3d34; color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; width: 100%; font-size: 0.7rem; margin-top: 5px; }
+        .btn-filter:hover { background: #1e6b5e; }
+        .legend-dash { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.65rem; }
+        .color-box { width: 14px; height: 14px; border-radius: 4px; }
+        .color-box.hijau { background: #2a9d8f; }
+        .color-box.kuning { background: #ffc107; }
+        #statusChart { max-height: 130px !important; margin: 5px 0; }
+        
+        .map-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 12px;
+            padding: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            display: flex;
+            gap: 4px;
+            flex-direction: column;
+        }
+        .map-switcher button {
+            background: #0a3d34;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        .map-switcher button:hover { background: #1e6b5e; }
+        .map-switcher button.active { background: #ffd966; color: #0a3d34; }
+        
+        .bottom-right-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+        }
+        
+        .control-group {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .row-buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .control-btn {
+            background: #0a3d34;
+            color: white;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .control-btn:hover { background: #1e6b5e; transform: scale(1.05); }
+        
+        .btn-laporan {
+            background: #0a3d34;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            white-space: nowrap;
+        }
+        .btn-laporan:hover { background: #1e6b5e; }
+        
+        .btn-popup {
+            background: #0a3d34;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            margin-top: 8px;
+            width: 100%;
+            text-align: center;
+        }
+        .btn-popup:hover { background: #1e6b5e; }
+        .btn-popup-download { background: #e63946; }
+        .btn-popup-download:hover { background: #c1121f; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 85vh;
+            overflow: auto;
+            padding: 20px;
+            position: relative;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ffd966;
+        }
+        .modal-header h2 { color: #0a3d34; font-size: 1.4rem; }
+        .close-btn {
+            background: #e63946;
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .laporan-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .laporan-table th, .laporan-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .laporan-table th { background: #0a3d34; color: white; position: sticky; top: 0; }
+        .laporan-table tr:nth-child(even) { background: #f0f7f4; }
+        .ringkasan {
+            background: #e0f2ef;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ringkasan-item { flex: 1; text-align: center; }
+        .ringkasan-angka { font-size: 1.8rem; font-weight: 800; color: #0a3d34; }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+        .btn-csv { background: #2a9d8f; color: white; border: none; padding: 8px 20px; border-radius: 40px; cursor: pointer; }
+        .btn-csv:hover { background: #1e6b5e; }
+        .btn-pdf { background: #e63946; color: white; border: none; padding: 8px 20px; border-radius: 40px; cursor: pointer; }
+        .btn-pdf:hover { background: #c1121f; }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            z-index: 1001;
+            font-size: 0.8rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-panel { width: 210px; padding: 10px; max-height: 60vh; }
+            .map-switcher button { padding: 4px 8px; font-size: 0.6rem; }
+            .control-btn { width: 34px; height: 34px; font-size: 0.8rem; }
+            .btn-laporan { padding: 6px 12px; font-size: 0.65rem; }
+            .control-group { padding: 8px 12px; gap: 8px; }
+            .row-buttons { gap: 8px; }
+            .btn-csv, .btn-pdf { padding: 6px 12px; font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fas fa-map-marked-alt"></i></div>
+        <div>
+            <h1>WebGIS Aset Tanah Pemda</h1>
+            <p>Kecamatan Sumber · Kabupaten Cirebon</p>
+        </div>
+    </div>
+    <div class="nav-menu">
+        <a href="index.html" class="btn-home"><i class="fas fa-home"></i> Beranda</a>
+    </div>
+</div>
+
+<div class="map-container">
+    <div id="map"></div>
+    
+    <div class="dashboard-container">
+        <button class="dashboard-toggle-btn" id="toggleDashboardBtn">
+            <i class="fas fa-chart-pie"></i> <span id="toggleText">Sembunyikan</span> <i class="fas fa-chevron-up" id="toggleIcon"></i>
+        </button>
+        <div class="dashboard-panel" id="dashboardPanel">
+            <h4><i class="fas fa-chart-pie"></i> Dashboard</h4>
+            <div class="stat-card"><div class="stat-number" id="totalAset">0</div><div class="stat-label">Total Bidang Aset</div></div>
+            <div class="legend-dash"><div class="color-box hijau"></div><span>Sudah Terukur: <strong id="sudahCount">0</strong></span></div>
+            <div class="legend-dash"><div class="color-box kuning"></div><span>Belum Terukur: <strong id="belumCount">0</strong></span></div>
+            <canvas id="statusChart" width="200" height="130"></canvas>
+            <h4><i class="fas fa-filter"></i> Filter & Cari</h4>
+            <div class="filter-group"><label><i class="fas fa-search"></i> Cari Nama Aset</label><input type="text" id="searchInput" placeholder="Ketik nama aset..."></div>
+            <div class="filter-group"><label><i class="fas fa-filter"></i> Filter Status</label><select id="statusFilter"><option value="all">Semua Status</option><option value="Sudah Terukur">Sudah Terukur</option><option value="Belum Terukur">Belum Terukur</option></select></div>
+            <button class="btn-filter" id="resetFilterBtn"><i class="fas fa-undo"></i> Reset Filter</button>
+        </div>
+    </div>
+    
+    <div class="map-switcher">
+        <button id="btnGoogle" class="active">🛰️ Google</button>
+        <button id="btnBing">🗺️ Bing</button>
+        <button id="btnOSM">🌍 OSM</button>
+    </div>
+    
+    <div class="bottom-right-controls">
+        <div class="control-group">
+            <div class="row-buttons">
+                <button class="control-btn" id="zoomInBtn" title="Perbesar"><i class="fas fa-plus"></i></button>
+                <button class="control-btn" id="zoomOutBtn" title="Perkecil"><i class="fas fa-minus"></i></button>
+                <button class="control-btn" id="locationBtn" title="Lokasi Saya"><i class="fas fa-location-dot"></i></button>
+            </div>
+            <button class="btn-laporan" id="laporanBtn"><i class="fas fa-file-alt"></i> 📋 Lihat Laporan</button>
+        </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">⏳ Memuat data...</div>
+</div>
+
+<div id="laporanModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-alt"></i> Laporan Data Aset Tanah</h2>
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <div id="laporanBody"><p style="text-align: center;">Memuat data...</p></div>
+        <div class="modal-buttons">
+            <button class="btn-csv" id="exportCsvBtn"><i class="fas fa-file-excel"></i> 📥 Download CSV</button>
+            <button class="btn-pdf" id="downloadPdfBtn"><i class="fas fa-file-pdf"></i> 📥 Download PDF</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    var map = L.map('map', { zoomControl: false }).setView([-6.8035, 108.483], 14);
+    
+    document.getElementById('zoomInBtn').addEventListener('click', () => map.zoomIn());
+    document.getElementById('zoomOutBtn').addEventListener('click', () => map.zoomOut());
+    
+    var userMarker = null;
+    document.getElementById('locationBtn').addEventListener('click', function() {
+        if (!navigator.geolocation) { alert("Browser tidak mendukung geolokasi"); return; }
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                var lat = pos.coords.latitude, lng = pos.coords.longitude;
+                if (userMarker) map.removeLayer(userMarker);
+                userMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Lokasi Anda</b>").openPopup();
+                map.setView([lat, lng], 16);
+            },
+            function() { alert("Tidak dapat mengambil lokasi"); }
+        );
+    });
+    
+    function downloadGeoJSON(feature, namaAset, idAset) {
+        const geojson = {
+            "type": "FeatureCollection",
+            "name": `aset_${idAset}`,
+            "features": [feature]
+        };
+        const dataStr = JSON.stringify(geojson, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aset_${idAset}_${namaAset.replace(/\s/g, '_')}.geojson`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    function exportToCSV() {
+        if (!allData || allData.length === 0) {
+            alert("Data belum tersedia");
+            return;
+        }
+        let csvRows = [];
+        let headers = ["No", "ID Aset", "Keterangan ID", "Nama Aset", "Luas", "Status", "Kecamatan", "Desa", "Kabupaten", "Provinsi"];
+        csvRows.push(headers.join(","));
+        allData.forEach((f, i) => {
+            let p = f.properties;
+            let row = [i+1, `"${p.ID_Aset || '-'}"`, `"${p.Ket_ID || '-'}"`, `"${p.Nama_Aset || '-'}"`, `"${p.Luas || '-'}"`, `"${p.Status || 'Belum Terukur'}"`, `"${p.KECAMATAN || 'Sumber'}"`, `"${p.KEL_DESA || '-'}"`, `"${p.KAB_KOTA || 'Cirebon'}"`, `"${p.PROVINSI || 'Jawa Barat'}"`];
+            csvRows.push(row.join(","));
+        });
+        const csvContent = csvRows.join("\n");
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `data_aset_tanah_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    var modal = document.getElementById('laporanModal');
+    var laporanBtn = document.getElementById('laporanBtn');
+    var closeModalBtn = document.getElementById('closeModalBtn');
+    var downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    var exportCsvBtn = document.getElementById('exportCsvBtn');
+    
+    laporanBtn.onclick = function() { modal.style.display = 'flex'; tampilkanLaporan(); };
+    closeModalBtn.onclick = function() { modal.style.display = 'none'; };
+    window.onclick = function(event) { if (event.target == modal) modal.style.display = 'none'; };
+    
+    downloadPdfBtn.onclick = function() {
+        var element = document.getElementById('laporanBody');
+        html2pdf().set({ margin: [0.5,0.5,0.5,0.5], filename: 'laporan_aset_tanah_sumber.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } }).from(element).save();
+    };
+    
+    exportCsvBtn.onclick = function() { exportToCSV(); };
+    
+    function tampilkanLaporan() {
+        var body = document.getElementById('laporanBody');
+        if (!allData || allData.length === 0) { body.innerHTML = '<p style="text-align: center;">Data belum tersedia</p>'; return; }
+        var sudah = allData.filter(f => f.properties.Status === 'Sudah Terukur').length;
+        var belum = allData.length - sudah;
+        var tanggal = new Date().toLocaleDateString('id-ID');
+        var html = `<div style="text-align: center; margin-bottom: 20px;"><h3>LAPORAN DATA ASET TANAH</h3><p>Kecamatan Sumber, Kabupaten Cirebon, Provinsi Jawa Barat</p><p>Tanggal: ${tanggal}</p></div>
+            <table class="laporan-table"><thead><tr><th>No</th><th>ID Aset</th><th>Nama Aset</th><th>Luas</th><th>Status</th><th>Desa</th><th>Kecamatan</th></tr></thead><tbody>`;
+        allData.forEach((f, i) => {
+            var p = f.properties;
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${p.ID_Aset || '-'} (${p.Ket_ID || '-'})</td>
+                <td>${p.Nama_Aset || '-'}</td>
+                <td>${p.Luas || '-'}</td>
+                <td>${p.Status || 'Belum Terukur'}</td>
+                <td>${p.KEL_DESA || '-'}</td>
+                <td>${p.KECAMATAN || 'Sumber'}</td>
+            </tr>`;
+        });
+        html += `</tbody></tr>
+            <div class="ringkasan"><div class="ringkasan-item"><div class="ringkasan-angka">${allData.length}</div><div>Total Bidang Aset</div></div>
+            <div class="ringkasan-item"><div class="ringkasan-angka" style="color:#2a9d8f;">${sudah}</div><div>Sudah Terukur</div></div>
+            <div class="ringkasan-item"><div class="ringkasan-angka" style="color:#ffc107;">${belum}</div><div>Belum Terukur</div></div></div>
+            <div style="text-align: center; margin-top: 20px; font-size: 0.7rem; color: gray;">Dicetak dari WebGIS Inventarisasi Aset Tanah Kab. Cirebon</div>`;
+        body.innerHTML = html;
+    }
+    
+    let dashboardOpen = true;
+    const toggleBtn = document.getElementById('toggleDashboardBtn');
+    const dashboardPanel = document.getElementById('dashboardPanel');
+    const toggleText = document.getElementById('toggleText');
+    const toggleIcon = document.getElementById('toggleIcon');
+    toggleBtn.addEventListener('click', () => {
+        if (dashboardOpen) {
+            dashboardPanel.classList.add('hidden');
+            toggleText.innerText = 'Buka';
+            toggleIcon.className = 'fas fa-chevron-down';
+        } else {
+            dashboardPanel.classList.remove('hidden');
+            toggleText.innerText = 'Sembunyikan';
+            toggleIcon.className = 'fas fa-chevron-up';
+        }
+        dashboardOpen = !dashboardOpen;
+    });
+    
+    var geojsonLayer, jabarLayer, batasKecamatanLayer, allData = [], currentChart;
+    
+    var baseMaps = {
+        GoogleSatelit: L.tileLayer('https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { attribution: 'Google Maps', maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }),
+        BingAerial: L.tileLayer('http://ecn.t3.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1', { attribution: 'Bing Maps', maxZoom: 19 }),
+        OSM: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM', maxZoom: 19 })
+    };
+    baseMaps.GoogleSatelit.addTo(map);
+    
+    function setActive(activeId) {
+        ['btnGoogle', 'btnBing', 'btnOSM'].forEach(id => {
+            let btn = document.getElementById(id);
+            if (btn) btn.classList.toggle('active', id === activeId);
+        });
+    }
+    document.getElementById('btnGoogle').onclick = () => { map.removeLayer(baseMaps.BingAerial); map.removeLayer(baseMaps.OSM); baseMaps.GoogleSatelit.addTo(map); setActive('btnGoogle'); };
+    document.getElementById('btnBing').onclick = () => { map.removeLayer(baseMaps.GoogleSatelit); map.removeLayer(baseMaps.OSM); baseMaps.BingAerial.addTo(map); setActive('btnBing'); };
+    document.getElementById('btnOSM').onclick = () => { map.removeLayer(baseMaps.GoogleSatelit); map.removeLayer(baseMaps.BingAerial); baseMaps.OSM.addTo(map); setActive('btnOSM'); };
+    
+    // Style untuk aset: fill 50% transparan, outline solid
+    function getStyle(status) {
+        return { 
+            color: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', 
+            weight: 2, 
+            fillColor: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', 
+            fillOpacity: 0.5  // 50% transparan
+        };
+    }
+    
+    function updateDashboard(data) {
+        let total = data.length, sudah = data.filter(f => f.properties.Status === 'Sudah Terukur').length, belum = total - sudah;
+        document.getElementById('totalAset').innerText = total;
+        document.getElementById('sudahCount').innerText = sudah;
+        document.getElementById('belumCount').innerText = belum;
+        if (currentChart) currentChart.destroy();
+        currentChart = new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: { labels: ['Sudah Terukur', 'Belum Terukur'], datasets: [{ data: [sudah, belum], backgroundColor: ['#2a9d8f', '#ffc107'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 9 } } } } }
+        });
+    }
+    
+    // Load Batas Jawa Barat (hitam 50% opacity, tidak bisa diklik)
+    function loadBatasJawaBarat() {
+        fetch('data/jawa_barat.geojson')
+            .then(response => {
+                if (!response.ok) throw new Error('File jawa_barat.geojson tidak ditemukan');
+                return response.json();
+            })
+            .then(data => {
+                jabarLayer = L.geoJSON(data, {
+                    style: {
+                        color: 'black',
+                        weight: 1,
+                        opacity: 0.5,
+                        fillColor: 'black',
+                        fillOpacity: 0.5
+                    },
+                    interactive: false,  // tidak bisa diklik
+                    onEachFeature: function(feature, layer) {
+                        let props = feature.properties;
+                        let nama = props.NAME_1 || props.Provinsi || props.provinsi || 'Jawa Barat';
+                        layer.bindPopup(`
+                            <div style="min-width:160px">
+                                <strong>🏝️ PROVINSI JAWA BARAT</strong><br>
+                                <hr>
+                                📍 ${nama}<br>
+                                🎨 Fill: Hitam 50% opacity
+                            </div>
+                        `);
+                    }
+                }).addTo(map);
+                console.log('Batas Jawa Barat berhasil dimuat (hitam 50%, non-interaktif)');
+            })
+            .catch(err => {
+                console.warn('Gagal memuat batas Jawa Barat:', err);
+            });
+    }
+    
+    // Load Batas Kecamatan Sumber (merah, garis saja, tidak mengganggu klik)
+    function loadBatasKecamatan() {
+        fetch('data/sumber.geojson')
+            .then(response => {
+                if (!response.ok) throw new Error('File sumber.geojson tidak ditemukan');
+                return response.json();
+            })
+            .then(data => {
+                batasKecamatanLayer = L.geoJSON(data, {
+                    style: {
+                        color: '#e63946',
+                        weight: 4,
+                        opacity: 1,
+                        fillOpacity: 0
+                    },
+                    interactive: false,  // tidak mengganggu klik aset
+                    onEachFeature: function(feature, layer) {
+                        let props = feature.properties;
+                        let nama = props.nama || props.NAMA || props.KECAMATAN || 'Kecamatan Sumber';
+                        layer.bindPopup(`
+                            <div style="min-width:180px">
+                                <strong><i class="fas fa-border-all"></i> KECAMATAN SUMBER</strong><br>
+                                <hr>
+                                📍 Nama: ${nama}<br>
+                                📐 Wilayah Kecamatan Sumber<br>
+                                Kabupaten Cirebon, Jawa Barat<br>
+                                🎨 Garis: Merah 100% opacity
+                            </div>
+                        `);
+                    }
+                }).addTo(map);
+                console.log('Batas kecamatan berhasil dimuat (merah, garis saja, non-interaktif)');
+            })
+            .catch(err => {
+                console.warn('Gagal memuat batas kecamatan:', err);
+            });
+    }
+    
+    // Panggil load semua layer
+    loadBatasJawaBarat();
+    loadBatasKecamatan();
+    
+    function updateMap(data) {
+        if (geojsonLayer) map.removeLayer(geojsonLayer);
+        geojsonLayer = L.geoJSON(data, {
+            style: f => getStyle(f.properties.Status),
+            onEachFeature: (f, layer) => {
+                let p = f.properties;
+                let warna = p.Status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107';
+                let namaAset = p.Nama_Aset || '-';
+                let idAset = p.ID_Aset || 'unknown';
+                
+                let downloadBtn = `<button class="btn-popup btn-popup-download" onclick="downloadGeoJSON(${JSON.stringify(f).replace(/"/g, '&quot;')}, '${namaAset.replace(/'/g, "\\'")}', '${idAset}')"><i class="fas fa-download"></i> 📥 Download GeoJSON</button>`;
+                
+                layer.bindPopup(`
+                    <div style="min-width:240px">
+                        <div style="background:#0a3d34;color:white;padding:8px;margin:-12px -12px 8px -12px;border-radius:12px 12px 0 0;"><strong><i class="fas fa-landmark"></i> ${p.Nama_Aset || '-'}</strong></div>
+                        <table style="width:100%;font-size:0.75rem;">
+                            <tr><td style="padding:4px 0;"><strong>📌 ID Aset:</strong>NonNull<td>${p.ID_Aset || '-'} (${p.Ket_ID || '-'})NonNull</tr>
+                            <tr><td style="padding:4px 0;"><strong>📏 Luas:</strong>NonNull<td>${p.Luas || '-'}NonNull</tr>
+                            <tr><td style="padding:4px 0;"><strong>📊 Status:</strong>NonNull<td><span style="background:${warna};color:white;padding:2px 8px;border-radius:20px;">${p.Status || 'Belum'}</span>NonNull</tr>
+                            <tr><td style="padding:4px 0;"><strong>🏘️ Desa:</strong>NonNull<td>${p.KEL_DESA || '-'}NonNull</tr>
+                            <tr><td style="padding:4px 0;"><strong>🗺️ Kecamatan:</strong>NonNull<td>${p.KECAMATAN || 'Sumber'}NonNull</tr>
+                        </table>
+                        ${downloadBtn}
+                    </div>
+                `);
+            }
+        }).addTo(map);
+        
+        // Urutan layer: jabar (paling bawah), aset (tengah), batas kecamatan (paling atas)
+        if (jabarLayer) jabarLayer.bringToBack();
+        if (batasKecamatanLayer) batasKecamatanLayer.bringToFront();
+        
+        let bounds = geojsonLayer.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+            map.setView([-6.8035, 108.483], 14);
+        }
+        updateDashboard(data);
+    }
+    
+    function filterData() {
+        let search = document.getElementById('searchInput').value.toLowerCase();
+        let stat = document.getElementById('statusFilter').value;
+        let filtered = allData.filter(f => 
+            (search === '' || (f.properties.Nama_Aset && f.properties.Nama_Aset.toLowerCase().includes(search))) &&
+            (stat === 'all' || f.properties.Status === stat)
+        );
+        updateMap(filtered);
+    }
+    
+    document.getElementById('searchInput').addEventListener('input', filterData);
+    document.getElementById('statusFilter').addEventListener('change', filterData);
+    document.getElementById('resetFilterBtn').addEventListener('click', () => {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = 'all';
+        filterData();
+    });
+    
+    document.getElementById('loading').style.display = 'block';
+    fetch('data/aset.geojson')
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            allData = data.features.filter(f => f.properties && f.geometry && f.properties.ID_Aset !== null);
+            updateMap(allData);
+        })
+        .catch(() => {
+            document.getElementById('loading').style.display = 'none';
+            L.popup().setLatLng([-6.8035, 108.483]).setContent('<div style="color:#e63946;"><strong>⚠️ Gagal memuat data!</strong><br>Pastikan file <strong>data/aset.geojson</strong> ada.</div>').openOn(map);
+        });
+    
+    L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+</script>
+</body>
+</html>
