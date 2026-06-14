@@ -457,7 +457,7 @@
                 <td>${p.KECAMATAN || 'Sumber'}</td>
             </tr>`;
         });
-        html += `</tbody></tr>
+        html += `</tbody></table>
             <div class="ringkasan"><div class="ringkasan-item"><div class="ringkasan-angka">${allData.length}</div><div>Total Bidang Aset</div></div>
             <div class="ringkasan-item"><div class="ringkasan-angka" style="color:#2a9d8f;">${sudah}</div><div>Sudah Terukur</div></div>
             <div class="ringkasan-item"><div class="ringkasan-angka" style="color:#ffc107;">${belum}</div><div>Belum Terukur</div></div></div>
@@ -502,14 +502,8 @@
     document.getElementById('btnBing').onclick = () => { map.removeLayer(baseMaps.GoogleSatelit); map.removeLayer(baseMaps.OSM); baseMaps.BingAerial.addTo(map); setActive('btnBing'); };
     document.getElementById('btnOSM').onclick = () => { map.removeLayer(baseMaps.GoogleSatelit); map.removeLayer(baseMaps.BingAerial); baseMaps.OSM.addTo(map); setActive('btnOSM'); };
     
-    // Style untuk aset: fill 50% transparan, outline solid
     function getStyle(status) {
-        return { 
-            color: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', 
-            weight: 2, 
-            fillColor: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', 
-            fillOpacity: 0.5  // 50% transparan
-        };
+        return { color: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', weight: 2, fillColor: status === 'Sudah Terukur' ? '#2a9d8f' : '#ffc107', fillOpacity: 0.5 };
     }
     
     function updateDashboard(data) {
@@ -525,7 +519,7 @@
         });
     }
     
-    // Load Batas Jawa Barat (hitam 50% opacity, tidak bisa diklik)
+    // Load Batas Jawa Barat (AKTIF - file sudah dikecilkan)
     function loadBatasJawaBarat() {
         fetch('data/jawa_barat.geojson')
             .then(response => {
@@ -541,28 +535,21 @@
                         fillColor: 'black',
                         fillOpacity: 0.5
                     },
-                    interactive: false,  // tidak bisa diklik
+                    interactive: false,
                     onEachFeature: function(feature, layer) {
                         let props = feature.properties;
                         let nama = props.NAME_1 || props.Provinsi || props.provinsi || 'Jawa Barat';
-                        layer.bindPopup(`
-                            <div style="min-width:160px">
-                                <strong>🏝️ PROVINSI JAWA BARAT</strong><br>
-                                <hr>
-                                📍 ${nama}<br>
-                                🎨 Fill: Hitam 50% opacity
-                            </div>
-                        `);
+                        layer.bindPopup(`<div><strong>🏝️ PROVINSI JAWA BARAT</strong><br>📍 ${nama}<br>🎨 Fill: Hitam 50% opacity</div>`);
                     }
                 }).addTo(map);
-                console.log('Batas Jawa Barat berhasil dimuat (hitam 50%, non-interaktif)');
+                console.log('Batas Jawa Barat berhasil dimuat');
             })
             .catch(err => {
                 console.warn('Gagal memuat batas Jawa Barat:', err);
             });
     }
     
-    // Load Batas Kecamatan Sumber (merah, garis saja, tidak mengganggu klik)
+    // Load Batas Kecamatan Sumber
     function loadBatasKecamatan() {
         fetch('data/sumber.geojson')
             .then(response => {
@@ -577,30 +564,21 @@
                         opacity: 1,
                         fillOpacity: 0
                     },
-                    interactive: false,  // tidak mengganggu klik aset
+                    interactive: false,
                     onEachFeature: function(feature, layer) {
                         let props = feature.properties;
                         let nama = props.nama || props.NAMA || props.KECAMATAN || 'Kecamatan Sumber';
-                        layer.bindPopup(`
-                            <div style="min-width:180px">
-                                <strong><i class="fas fa-border-all"></i> KECAMATAN SUMBER</strong><br>
-                                <hr>
-                                📍 Nama: ${nama}<br>
-                                📐 Wilayah Kecamatan Sumber<br>
-                                Kabupaten Cirebon, Jawa Barat<br>
-                                🎨 Garis: Merah 100% opacity
-                            </div>
-                        `);
+                        layer.bindPopup(`<div><strong><i class="fas fa-border-all"></i> KECAMATAN SUMBER</strong><br>📍 ${nama}<br>📐 Wilayah Kecamatan Sumber<br>Kabupaten Cirebon, Jawa Barat<br>🎨 Garis: Merah 100% opacity</div>`);
                     }
                 }).addTo(map);
-                console.log('Batas kecamatan berhasil dimuat (merah, garis saja, non-interaktif)');
+                console.log('Batas kecamatan berhasil dimuat');
             })
             .catch(err => {
                 console.warn('Gagal memuat batas kecamatan:', err);
             });
     }
     
-    // Panggil load semua layer
+    // Panggil load semua layer (Batas Jawa Barat AKTIF)
     loadBatasJawaBarat();
     loadBatasKecamatan();
     
@@ -618,13 +596,20 @@
                 
                 layer.bindPopup(`
                     <div style="min-width:240px">
-                        <div style="background:#0a3d34;color:white;padding:8px;margin:-12px -12px 8px -12px;border-radius:12px 12px 0 0;"><strong><i class="fas fa-landmark"></i> ${p.Nama_Aset || '-'}</strong></div>
+                        <div style="background:#0a3d34;color:white;padding:8px;margin:-12px -12px 8px -12px;border-radius:12px 12px 0 0;">
+                            <strong><i class="fas fa-landmark"></i> ${p.Nama_Aset || '-'}</strong>
+                        </div>
                         <table style="width:100%;font-size:0.75rem;">
-                            <tr><td style="padding:4px 0;"><strong>📌 ID Aset:</strong>NonNull<td>${p.ID_Aset || '-'} (${p.Ket_ID || '-'})NonNull</tr>
-                            <tr><td style="padding:4px 0;"><strong>📏 Luas:</strong>NonNull<td>${p.Luas || '-'}NonNull</tr>
-                            <tr><td style="padding:4px 0;"><strong>📊 Status:</strong>NonNull<td><span style="background:${warna};color:white;padding:2px 8px;border-radius:20px;">${p.Status || 'Belum'}</span>NonNull</tr>
-                            <tr><td style="padding:4px 0;"><strong>🏘️ Desa:</strong>NonNull<td>${p.KEL_DESA || '-'}NonNull</tr>
-                            <tr><td style="padding:4px 0;"><strong>🗺️ Kecamatan:</strong>NonNull<td>${p.KECAMATAN || 'Sumber'}NonNull</tr>
+                            <tr><td style="padding:4px 0;"><strong>📌 ID Aset:</strong></td>
+                            <td>${p.ID_Aset || '-'} (${p.Ket_ID || '-'})</td>--
+                            <tr><td style="padding:4px 0;"><strong>📏 Luas:</strong></td>
+                            <td>${p.Luas || '-'}</td>--
+                            <tr><td style="padding:4px 0;"><strong>📊 Status:</strong></td>
+                            <td><span style="background:${warna};color:white;padding:2px 8px;border-radius:20px;">${p.Status || 'Belum Terukur'}</span></td>--
+                            <tr><td style="padding:4px 0;"><strong>🏘️ Desa:</strong></td>
+                            <td>${p.KEL_DESA || '-'}</td>--
+                            <tr><td style="padding:4px 0;"><strong>🗺️ Kecamatan:</strong></td>
+                            <td>${p.KECAMATAN || 'Sumber'}</td>--
                         </table>
                         ${downloadBtn}
                     </div>
